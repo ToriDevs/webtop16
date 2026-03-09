@@ -25,7 +25,7 @@
 2. Se abrirá un panel donde puedes:
    - Cambiar el nombre del campeón (usa el desplegable para seleccionar personajes predefinidos)
    - Cambiar el valor (cantidad de victorias/puntos)
-   - Si seleccionas "Personalizado", podrás ingresar una URL de imagen personalizada
+   - Si seleccionas "Personalizado", puedes ingresar nombre personalizado y URL de imagen
    - Ajustar la posición de la imagen con los sliders X e Y
    - Marcar "Mostrar nombre y cantidad" para que aparezca en el gráfico
 
@@ -54,11 +54,10 @@
 3. Comparte el link con otros
 4. Cuando alguien abra el link, verá exactamente tu evento con todos los datos
 
-### Así Funciona
-- Los datos se guardan automáticamente en localStorage
-- Cada evento compartido obtiene un ID único
-- No necesita base de datos - funciona 100% en el navegador
-- Los datos se guardan en la máquina del usuario
+### Asi Funciona
+- Intenta guardar el evento en Supabase y generar URL `?event=...`
+- Si Supabase no responde, usa fallback local `?shared=...`
+- Los cambios tambien se guardan automaticamente en localStorage
 
 ## 💾 Persistencia de Datos
 

@@ -7,56 +7,94 @@ const closeBtn = document.getElementById('close-btn');
 const editorPanel = document.getElementById('editor-panel');
 const editorOverlay = document.getElementById('editor-overlay');
 const dataList = document.getElementById('data-list');
+const eventTitleInput = document.getElementById('event-title');
 
 const centerX = 350;
 const centerY = 350;
 const radius = 280;
+const LOCAL_STORAGE_KEY = 'tournament_data';
 
-// Base de datos de categorías con imágenes
+const SUPABASE_URL = 'https://ddsjuhygkfamlsqnkafr.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_fQG7Ih4_TyJQnSGws1x7lw_FNMyl_Hg';
+
+const supabaseClient =
+  window.supabase && SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
+    : null;
+
 const categories = {
-  'Draven': 'https://tcgplayer-cdn.tcgplayer.com/product/663442_in_1000x1000.jpg',
-  'Irelia': 'https://tcgplayer-cdn.tcgplayer.com/product/663441_in_1000x1000.jpg',
-  'Ezreal': 'https://tcgplayer-cdn.tcgplayer.com/product/664927_in_1000x1000.jpg',
-  'Viktor': 'https://cardbot.com.au/cdn/shop/files/653063_400w_2271a16f-2327-4211-a650-e97adcef0cee.jpg?v=1762749158',
-  'Lucian': 'https://riftdecks.com/img/cards/riftbound/SFD/sfd-183-221_full.png',
-  'Kai\'sa': 'https://static.dotgg.gg/riftbound/cards/OGN-247.webp',
-  'Sivir': 'https://tcgplayer-cdn.tcgplayer.com/product/663438_in_1000x1000.jpg',
-  'Rek\'sai': 'https://tcgplayer-cdn.tcgplayer.com/product/664922_in_1000x1000.jpg',
+  Draven: 'https://tcgplayer-cdn.tcgplayer.com/product/663442_in_1000x1000.jpg',
+  Irelia: 'https://tcgplayer-cdn.tcgplayer.com/product/663441_in_1000x1000.jpg',
+  Ezreal: 'https://tcgplayer-cdn.tcgplayer.com/product/664927_in_1000x1000.jpg',
+  Viktor: 'https://cardbot.com.au/cdn/shop/files/653063_400w_2271a16f-2327-4211-a650-e97adcef0cee.jpg?v=1762749158',
+  Lucian: 'https://riftdecks.com/img/cards/riftbound/SFD/sfd-183-221_full.png',
+  "Kai'sa": 'https://static.dotgg.gg/riftbound/cards/OGN-247.webp',
+  Sivir: 'https://tcgplayer-cdn.tcgplayer.com/product/663438_in_1000x1000.jpg',
+  "Rek'sai": 'https://tcgplayer-cdn.tcgplayer.com/product/664922_in_1000x1000.jpg',
   'Miss Fortune': 'https://cdn.piltoverarchive.com/cards/OGN-267.webp',
-  'Personalizado': ''
+  Personalizado: ''
 };
 
+const palette = ['#EE6C4D', '#3D5A80', '#2A9D8F', '#E9C46A', '#F4A261', '#4D908E', '#577590', '#BC6C25', '#6D597A', '#4361EE'];
+
 let data = [
-  { name: 'Draven', value: 7, color: '#FF6B6B', image: '', showLabel: false },
-  { name: 'Irelia', value: 2, color: '#4ECDC4', image: '', showLabel: false },
-  { name: 'Ezreal', value: 2, color: '#45B7D1', image: '', showLabel: false },
-  { name: 'Viktor', value: 1, color: '#FFA07A', image: '', showLabel: false },
-  { name: 'Lucian', value: 1, color: '#98D8C8', image: '', showLabel: false },
-  { name: 'Kaisa', value: 1, color: '#F7DC6F', image: '', showLabel: false },
-  { name: 'Sivir', value: 1, color: '#BB8FCE', image: '', showLabel: false },
-  { name: 'Reksai', value: 1, color: '#85C1E2', image: '', showLabel: false }
+  { category: 'Draven', name: 'Draven', customName: '', value: 7, color: '#EE6C4D', image: '', showLabel: false },
+  { category: 'Irelia', name: 'Irelia', customName: '', value: 2, color: '#3D5A80', image: '', showLabel: false },
+  { category: 'Ezreal', name: 'Ezreal', customName: '', value: 2, color: '#2A9D8F', image: '', showLabel: false },
+  { category: 'Viktor', name: 'Viktor', customName: '', value: 1, color: '#E9C46A', image: '', showLabel: false },
+  { category: 'Lucian', name: 'Lucian', customName: '', value: 1, color: '#F4A261', image: '', showLabel: false },
+  { category: "Kai'sa", name: "Kai'sa", customName: '', value: 1, color: '#4D908E', image: '', showLabel: false },
+  { category: 'Sivir', name: 'Sivir', customName: '', value: 1, color: '#577590', image: '', showLabel: false },
+  { category: "Rek'sai", name: "Rek'sai", customName: '', value: 1, color: '#BC6C25', image: '', showLabel: false }
 ];
 
-let offsets = [
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 },
-  { x: 0, y: 0 }
-];
+let offsets = Array.from({ length: data.length }, () => ({ x: 0, y: 0 }));
+
+function ensureDefaults(item, index) {
+  const category = item.category || (categories[item.name] ? item.name : 'Personalizado');
+  const color = item.color || palette[index % palette.length];
+  const customName = item.customName || '';
+  const normalizedName =
+    category === 'Personalizado'
+      ? customName || item.name || `Item ${index + 1}`
+      : category;
+  const image = category === 'Personalizado' ? item.image || '' : categories[category] || item.image || '';
+
+  return {
+    category,
+    name: normalizedName,
+    customName,
+    value: Math.max(1, parseInt(item.value, 10) || 1),
+    color,
+    image,
+    showLabel: Boolean(item.showLabel)
+  };
+}
+
+function normalizeState() {
+  data = data.map((item, index) => ensureDefaults(item, index));
+
+  while (offsets.length < data.length) {
+    offsets.push({ x: 0, y: 0 });
+  }
+
+  offsets = offsets.slice(0, data.length).map((offset) => ({
+    x: Number(offset?.x) || 0,
+    y: Number(offset?.y) || 0
+  }));
+}
 
 function drawPie() {
   svg.innerHTML = '';
-  
+  normalizeState();
+
   let total = data.reduce((sum, item) => sum + item.value, 0);
-  if (total === 0) total = 1;
+  if (total === 0) {
+    total = 1;
+  }
 
   let cumulativeAngle = -Math.PI / 2;
-  
-  // Create defs for patterns
+
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   svg.appendChild(defs);
 
@@ -73,7 +111,6 @@ function drawPie() {
     const largeArc = angle > Math.PI ? 1 : 0;
     const pathData = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 
-    // Create pattern for image
     const patternId = `pattern-${index}`;
     const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
     pattern.setAttribute('id', patternId);
@@ -83,9 +120,7 @@ function drawPie() {
     pattern.setAttribute('x', offsets[index].x);
     pattern.setAttribute('y', offsets[index].y);
 
-    // Create image element for pattern
     const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-    
     if (item.image) {
       image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', item.image);
       image.setAttribute('width', '700');
@@ -94,76 +129,60 @@ function drawPie() {
       image.setAttribute('x', '0');
       image.setAttribute('y', '0');
     }
-    
     pattern.appendChild(image);
     defs.appendChild(pattern);
 
-    // Create the slice path
     const slice = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     slice.setAttribute('d', pathData);
-    
-    // Use pattern fill if image exists, otherwise use color
-    if (item.image) {
-      slice.setAttribute('fill', `url(#${patternId})`);
-    } else {
-      slice.setAttribute('fill', item.color);
-    }
-    
-    slice.setAttribute('stroke', '#333');
+    slice.setAttribute('fill', item.image ? `url(#${patternId})` : item.color);
+    slice.setAttribute('stroke', '#111822');
     slice.setAttribute('stroke-width', '2');
     slice.setAttribute('class', 'pie-slice');
-    slice.setAttribute('data-index', index);
-    
-    slice.addEventListener('mouseenter', function() {
-      slice.style.filter = 'brightness(0.85)';
-      
+
+    slice.addEventListener('mouseenter', () => {
+      slice.style.filter = 'brightness(0.84)';
       const midAngle = (startAngle + endAngle) / 2;
-      const tooltipX = centerX + (radius * 0.65) * Math.cos(midAngle);
-      const tooltipY = centerY + (radius * 0.65) * Math.sin(midAngle);
-      
+      const tooltipX = centerX + radius * 0.65 * Math.cos(midAngle);
+      const tooltipY = centerY + radius * 0.65 * Math.sin(midAngle);
+
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', tooltipX);
       text.setAttribute('y', tooltipY);
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'middle');
-      text.setAttribute('fill', '#fff');
+      text.setAttribute('fill', '#F9FAFB');
       text.setAttribute('font-size', '16');
-      text.setAttribute('font-weight', 'bold');
+      text.setAttribute('font-family', 'Space Grotesk');
+      text.setAttribute('font-weight', '600');
       text.setAttribute('pointer-events', 'none');
       text.setAttribute('class', 'pie-tooltip');
-      text.setAttribute('filter', 'drop-shadow(2px 2px 4px rgba(0,0,0,0.8))');
       text.textContent = `${item.name}: ${item.value}`;
-      
       svg.appendChild(text);
     });
-    
-    slice.addEventListener('mouseleave', function() {
+
+    slice.addEventListener('mouseleave', () => {
       slice.style.filter = '';
-      const tooltips = svg.querySelectorAll('.pie-tooltip');
-      tooltips.forEach(t => t.remove());
+      svg.querySelectorAll('.pie-tooltip').forEach((tooltip) => tooltip.remove());
     });
-    
+
     svg.appendChild(slice);
 
-    // Agregar etiqueta de nombre y valor si showLabel está activado
     if (item.showLabel) {
       const midAngle = (startAngle + endAngle) / 2;
-      const labelRadius = radius * 0.5;
-      const labelX = centerX + labelRadius * Math.cos(midAngle);
-      const labelY = centerY + labelRadius * Math.sin(midAngle);
-      
+      const labelX = centerX + radius * 0.5 * Math.cos(midAngle);
+      const labelY = centerY + radius * 0.5 * Math.sin(midAngle);
+
       const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       labelText.setAttribute('x', labelX);
       labelText.setAttribute('y', labelY);
       labelText.setAttribute('text-anchor', 'middle');
       labelText.setAttribute('dominant-baseline', 'middle');
-      labelText.setAttribute('fill', '#fff');
-      labelText.setAttribute('font-size', '14');
-      labelText.setAttribute('font-weight', 'bold');
+      labelText.setAttribute('fill', '#FFFFFF');
+      labelText.setAttribute('font-size', '13');
+      labelText.setAttribute('font-family', 'Space Grotesk');
+      labelText.setAttribute('font-weight', '600');
       labelText.setAttribute('pointer-events', 'none');
-      labelText.setAttribute('filter', 'drop-shadow(2px 2px 4px rgba(0,0,0,0.8))');
-      labelText.textContent = `${item.name}\n${item.value}`;
-      
+      labelText.textContent = `${item.name} (${item.value})`;
       svg.appendChild(labelText);
     }
 
@@ -171,282 +190,306 @@ function drawPie() {
   });
 }
 
+function buildEventPayload() {
+  return {
+    title: eventTitleInput.value || 'Nombre del evento',
+    data,
+    offsets,
+    version: 2,
+    createdAt: new Date().toISOString()
+  };
+}
+
+function saveToLocalStorage() {
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(buildEventPayload()));
+}
+
+function loadFromLocalStorage() {
+  const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (!raw) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    applyEventState(parsed);
+    return true;
+  } catch (error) {
+    console.error('Error loading local data:', error);
+    return false;
+  }
+}
+
+function applyEventState(eventData) {
+  if (!eventData) {
+    return;
+  }
+
+  if (eventData.title) {
+    eventTitleInput.value = eventData.title;
+  }
+
+  if (Array.isArray(eventData.data) && eventData.data.length) {
+    data = eventData.data;
+  }
+
+  if (Array.isArray(eventData.offsets)) {
+    offsets = eventData.offsets;
+  }
+
+  normalizeState();
+}
+
 function updateData() {
   const listItems = dataList.querySelectorAll('li');
-  
-  // Actualizar data array
+
   listItems.forEach((li, index) => {
-    const nameInput = li.querySelector('.name-input');
+    const categoryInput = li.querySelector('.category-select');
+    const customNameInput = li.querySelector('.custom-name-input');
     const valueInput = li.querySelector('.value-input');
     const imageInput = li.querySelector('.image-input');
     const showLabelInput = li.querySelector('.show-label-input');
     const offsetXInput = li.querySelector('.offset-x-input');
     const offsetYInput = li.querySelector('.offset-y-input');
-    
-    if (data[index]) {
-      data[index].name = nameInput ? (nameInput.value.trim() || `Item ${index + 1}`) : data[index].name;
-      data[index].value = valueInput ? (Math.max(1, parseInt(valueInput.value) || 1)) : data[index].value;
-      data[index].image = imageInput ? (imageInput.value.trim()) : '';
-      data[index].showLabel = showLabelInput ? showLabelInput.checked : false;
+
+    if (!data[index]) {
+      return;
     }
-    
+
+    const category = categoryInput ? categoryInput.value : 'Personalizado';
+    const customName = customNameInput ? customNameInput.value.trim() : '';
+
+    data[index].category = category;
+    data[index].customName = customName;
+    data[index].name = category === 'Personalizado' ? customName || 'Personalizado' : category;
+    data[index].value = valueInput ? Math.max(1, parseInt(valueInput.value, 10) || 1) : 1;
+    data[index].image =
+      category === 'Personalizado'
+        ? imageInput
+          ? imageInput.value.trim()
+          : ''
+        : categories[category] || '';
+    data[index].showLabel = showLabelInput ? showLabelInput.checked : false;
+
     if (offsets[index]) {
-      offsets[index].x = offsetXInput ? (parseFloat(offsetXInput.value) || 0) : 0;
-      offsets[index].y = offsetYInput ? (parseFloat(offsetYInput.value) || 0) : 0;
+      offsets[index].x = offsetXInput ? parseFloat(offsetXInput.value) || 0 : 0;
+      offsets[index].y = offsetYInput ? parseFloat(offsetYInput.value) || 0 : 0;
     }
   });
-  
+
   saveToLocalStorage();
   drawPie();
 }
 
-function downloadChart() {
-  const eventTitle = document.getElementById('event-title').value || 'Top 8';
-  const svgElement = svg.cloneNode(true);
-  
-  // Función para convertir imagen a base64
-  function imageToBase64(url) {
-    return new Promise((resolve) => {
-      if (!url) {
-        resolve(null);
-        return;
-      }
-      
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL());
-      };
-      
-      img.onerror = () => {
-        resolve(null);
-      };
-      
-      img.src = url;
-    });
-  }
-  
-  // Precargar todas las imágenes
-  Promise.all(data.map(item => imageToBase64(item.image))).then(base64Images => {
-    // Crear un nuevo SVG que incluya el título y el gráfico
-    const downloadSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    downloadSvg.setAttribute('width', '800');
-    downloadSvg.setAttribute('height', '900');
-    downloadSvg.setAttribute('viewBox', '0 0 800 900');
-    downloadSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    downloadSvg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-    
-    // Fondo negro
-    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bg.setAttribute('width', '800');
-    bg.setAttribute('height', '900');
-    bg.setAttribute('fill', '#000');
-    downloadSvg.appendChild(bg);
-    
-    // Título
-    const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    titleText.setAttribute('x', '400');
-    titleText.setAttribute('y', '60');
-    titleText.setAttribute('text-anchor', 'middle');
-    titleText.setAttribute('font-size', '48');
-    titleText.setAttribute('font-weight', '300');
-    titleText.setAttribute('fill', '#fff');
-    titleText.setAttribute('letter-spacing', '3');
-    titleText.textContent = eventTitle;
-    downloadSvg.appendChild(titleText);
-    
-    // Copiar contenido del SVG del gráfico
-    const pieGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    pieGroup.setAttribute('transform', 'translate(50, 120)');
-    
-    // Copiar elementos y reemplazar referencias de imágenes
-    const svgClone = svgElement.cloneNode(true);
-    
-    // Reemplazar URLs de imágenes con base64
-    const imageElements = svgClone.querySelectorAll('image');
-    imageElements.forEach((imgEl, idx) => {
-      if (base64Images[idx]) {
-        imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', base64Images[idx]);
-      }
-    });
-    
-    Array.from(svgClone.childNodes).forEach(node => {
-      pieGroup.appendChild(node.cloneNode(true));
-    });
-    downloadSvg.appendChild(pieGroup);
-    
-    const svgData = new XMLSerializer().serializeToString(downloadSvg);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    canvas.width = 800;
-    canvas.height = 900;
-    
+async function imageToBase64(url) {
+  return new Promise((resolve) => {
+    if (!url) {
+      resolve(null);
+      return;
+    }
+
     const img = new Image();
-    
+    img.crossOrigin = 'anonymous';
+
     img.onload = () => {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, 800, 900);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-      
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = `${eventTitle.replace(/\s+/g, '-')}-${new Date().getTime()}.png`;
-      link.click();
+      resolve(canvas.toDataURL());
     };
-    
-    img.onerror = () => {
-      // Si hay error, descargar como SVG
-      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${eventTitle.replace(/\s+/g, '-')}-${new Date().getTime()}.svg`;
-      link.click();
-      URL.revokeObjectURL(url);
-    };
-    
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+
+    img.onerror = () => resolve(null);
+    img.src = url;
   });
 }
 
-function saveToLocalStorage() {
-  const eventTitle = document.getElementById('event-title').value;
-  const saveData = {
-    title: eventTitle,
-    data: data,
-    timestamp: new Date().toISOString()
-  };
-  localStorage.setItem('tournament_data', JSON.stringify(saveData));
-  return saveData;
-}
+async function downloadChart() {
+  const eventTitle = eventTitleInput.value || 'Top 16';
+  const svgElement = svg.cloneNode(true);
+  const base64Images = await Promise.all(data.map((item) => imageToBase64(item.image)));
 
-function loadFromLocalStorage() {
-  const saved = localStorage.getItem('tournament_data');
-  if (saved) {
-    try {
-      const saveData = JSON.parse(saved);
-      return saveData;
-    } catch (e) {
-      console.error('Error loading from localStorage:', e);
-      return null;
+  const downloadSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  downloadSvg.setAttribute('width', '800');
+  downloadSvg.setAttribute('height', '900');
+  downloadSvg.setAttribute('viewBox', '0 0 800 900');
+  downloadSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  downloadSvg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '800');
+  bg.setAttribute('height', '900');
+  bg.setAttribute('fill', '#0A111C');
+  downloadSvg.appendChild(bg);
+
+  const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  titleText.setAttribute('x', '400');
+  titleText.setAttribute('y', '64');
+  titleText.setAttribute('text-anchor', 'middle');
+  titleText.setAttribute('font-size', '44');
+  titleText.setAttribute('font-family', 'Space Grotesk');
+  titleText.setAttribute('font-weight', '700');
+  titleText.setAttribute('fill', '#F8FAFC');
+  titleText.textContent = eventTitle;
+  downloadSvg.appendChild(titleText);
+
+  const pieGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  pieGroup.setAttribute('transform', 'translate(50, 120)');
+
+  const svgClone = svgElement.cloneNode(true);
+  svgClone.querySelectorAll('image').forEach((imgEl, idx) => {
+    if (base64Images[idx]) {
+      imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', base64Images[idx]);
     }
-  }
-  return null;
-}
+  });
 
-function generateShareLink() {
-  const eventTitle = document.getElementById('event-title').value || 'Nombre de evento';
-  const eventData = {
-    title: eventTitle,
-    data: data,
-    offsets: offsets
+  Array.from(svgClone.childNodes).forEach((node) => {
+    pieGroup.appendChild(node.cloneNode(true));
+  });
+
+  downloadSvg.appendChild(pieGroup);
+
+  const svgData = new XMLSerializer().serializeToString(downloadSvg);
+  const canvas = document.createElement('canvas');
+  canvas.width = 800;
+  canvas.height = 900;
+
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+
+  img.onload = () => {
+    ctx.fillStyle = '#0A111C';
+    ctx.fillRect(0, 0, 800, 900);
+    ctx.drawImage(img, 0, 0);
+
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `${eventTitle.replace(/\s+/g, '-')}-${Date.now()}.png`;
+    link.click();
   };
-  
-  // Codificar los datos en Base64 para pasar en la URL
-  const encoded = btoa(JSON.stringify(eventData));
-  
-  // Crear URL con los datos codificados
-  const baseUrl = window.location.origin + window.location.pathname;
-  const shareUrl = `${baseUrl}?shared=${encodeURIComponent(encoded)}`;
-  
-  return shareUrl;
+
+  img.onerror = () => {
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${eventTitle.replace(/\s+/g, '-')}-${Date.now()}.svg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
 }
 
-function loadFromShareLink() {
+function randomShareId() {
+  const token = Math.random().toString(36).slice(2, 10);
+  return `evt_${Date.now().toString(36)}_${token}`;
+}
+
+async function saveEventToSupabase(eventPayload) {
+  if (!supabaseClient) {
+    return null;
+  }
+
+  const eventId = randomShareId();
+  const { error } = await supabaseClient.from('shared_events').insert({
+    event_id: eventId,
+    title: eventPayload.title,
+    payload: eventPayload
+  });
+
+  if (error) {
+    console.error('Supabase save error:', error);
+    return null;
+  }
+
+  return eventId;
+}
+
+async function loadFromSupabaseEventId() {
+  const params = new URLSearchParams(window.location.search);
+  const eventId = params.get('event');
+
+  if (!eventId || !supabaseClient) {
+    return false;
+  }
+
+  const { data: row, error } = await supabaseClient
+    .from('shared_events')
+    .select('payload')
+    .eq('event_id', eventId)
+    .single();
+
+  if (error || !row?.payload) {
+    console.error('Supabase load error:', error);
+    return false;
+  }
+
+  applyEventState(row.payload);
+  return true;
+}
+
+function generateLegacyShareLink() {
+  const payload = buildEventPayload();
+  const encoded = btoa(JSON.stringify(payload));
+  const baseUrl = `${window.location.origin}${window.location.pathname}`;
+  return `${baseUrl}?shared=${encodeURIComponent(encoded)}`;
+}
+
+function loadFromLegacyShareLink() {
   const params = new URLSearchParams(window.location.search);
   const encodedData = params.get('shared');
-  
-  if (encodedData) {
+
+  if (!encodedData) {
+    return false;
+  }
+
+  try {
+    const eventData = JSON.parse(atob(decodeURIComponent(encodedData)));
+    applyEventState(eventData);
+    return true;
+  } catch (error) {
+    console.error('Error loading shared event:', error);
+    return false;
+  }
+}
+
+async function shareEvent() {
+  const payload = buildEventPayload();
+  const baseUrl = `${window.location.origin}${window.location.pathname}`;
+
+  let shareUrl = generateLegacyShareLink();
+  let usedSupabase = false;
+
+  const supabaseEventId = await saveEventToSupabase(payload);
+  if (supabaseEventId) {
+    shareUrl = `${baseUrl}?event=${encodeURIComponent(supabaseEventId)}`;
+    usedSupabase = true;
+  }
+
+  if (navigator.clipboard) {
     try {
-      const eventData = JSON.parse(atob(decodeURIComponent(encodedData)));
-      
-      // Cargar datos
-      if (eventData.title) {
-        document.getElementById('event-title').value = eventData.title;
-      }
-      if (eventData.data && Array.isArray(eventData.data)) {
-        data = eventData.data;
-      }
-      if (eventData.offsets && Array.isArray(eventData.offsets)) {
-        offsets = eventData.offsets;
-      }
-      
-      // Asegurar que los arrays tengan el mismo tamaño
-      while (offsets.length < data.length) {
-        offsets.push({ x: 0, y: 0 });
-      }
-      
-      drawPie();
-      populateEditor();
-      return true;
-    } catch (e) {
-      console.error('Error loading shared event:', e);
-      return false;
+      await navigator.clipboard.writeText(shareUrl);
+      const backendMessage = usedSupabase
+        ? 'Guardado en Supabase y copiado al portapapeles.'
+        : 'Copiado en modo local (fallback).';
+      alert(`Link listo. ${backendMessage}`);
+      return;
+    } catch (error) {
+      console.error('Clipboard error:', error);
     }
   }
-  return false;
-}
 
-function shareEvent() {
-  const shareUrl = generateShareLink();
-  
-  // Copiar al portapapeles
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      alert('✅ ¡Link copiado al portapapeles!\n\nPuede compartir este link con otros usuarios y verán exactamente tu evento con todos los datos.');
-    }).catch(() => {
-      // Fallback si clipboard falla
-      mostrarURLEnModal(shareUrl);
-    });
-  } else {
-    // Fallback para navegadores antiguos
-    mostrarURLEnModal(shareUrl);
-  }
-}
-
-function mostrarURLEnModal(url) {
-  const textarea = document.createElement('textarea');
-  textarea.value = url;
-  textarea.style.position = 'fixed';
-  textarea.style.top = '50%';
-  textarea.style.left = '50%';
-  textarea.style.transform = 'translate(-50%, -50%)';
-  textarea.style.zIndex = '99999';
-  textarea.style.width = '80%';
-  textarea.style.height = '200px';
-  textarea.style.padding = '10px';
-  textarea.style.fontSize = '12px';
-  textarea.style.fontFamily = 'monospace';
-  textarea.style.backgroundColor = '#222';
-  textarea.style.color = '#00d4ff';
-  textarea.style.border = '2px solid #00d4ff';
-  textarea.style.borderRadius = '8px';
-  
-  document.body.appendChild(textarea);
-  textarea.select();
-  
-  try {
-    document.execCommand('copy');
-    alert('✅ Link copiado al portapapeles desde el modal');
-  } catch (err) {
-    alert('Link de compartición:\n\n' + url);
-  }
-  
-  document.body.removeChild(textarea);
+  prompt('Copia y comparte este link:', shareUrl);
 }
 
 function populateEditor() {
   dataList.innerHTML = '';
+  normalizeState();
+
   data.forEach((item, index) => {
-    const itemElement = createItemElement(index, item);
-    dataList.appendChild(itemElement);
+    dataList.appendChild(createItemElement(index, item));
   });
 }
 
@@ -454,114 +497,108 @@ function createItemElement(index, itemData) {
   const li = document.createElement('li');
   li.className = 'editor-item';
   li.dataset.index = index;
-  
-  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#FF7F50', '#98FB98'];
-  const color = colors[index % colors.length];
-  
-  // Crear opciones del select
-  const categoryOptions = Object.keys(categories).map(cat => 
-    `<option value="${cat}" ${itemData.name === cat ? 'selected' : ''}>${cat}</option>`
-  ).join('');
-  
+
+  itemData.color = itemData.color || palette[index % palette.length];
+
+  const optionsHtml = Object.keys(categories)
+    .map((cat) => `<option value="${cat}" ${itemData.category === cat ? 'selected' : ''}>${cat}</option>`)
+    .join('');
+
+  const isCustom = itemData.category === 'Personalizado';
+  const customName = isCustom ? itemData.customName || itemData.name || '' : '';
+
   li.innerHTML = `
-    <div class="item-row">
-      <select class="name-input">
-        ${categoryOptions}
-      </select>
-      <input type="number" class="value-input" value="${itemData.value}" min="1" max="100">
-      <button class="remove-btn">−</button>
+    <div class="item-row top-row">
+      <select class="category-select">${optionsHtml}</select>
+      <input type="number" class="value-input" value="${itemData.value}" min="1" max="999">
+      <button class="remove-btn" type="button">-</button>
     </div>
-    <div class="item-row image-row" style="display: ${itemData.name === 'Personalizado' ? 'flex' : 'none'};">
-      <input type="text" class="image-input" placeholder="URL Imagen (Personalizado)" value="${itemData.image || ''}">
+    <div class="item-row custom-name-row" style="display:${isCustom ? 'block' : 'none'};">
+      <input type="text" class="custom-name-input" placeholder="Nombre personalizado" value="${customName}">
     </div>
-    <div class="item-row">
+    <div class="item-row image-row" style="display:${isCustom ? 'block' : 'none'};">
+      <input type="text" class="image-input" placeholder="URL de imagen personalizada" value="${isCustom ? itemData.image || '' : ''}">
+    </div>
+    <div class="item-row checkbox-row">
       <label class="label-checkbox">
         <input type="checkbox" class="show-label-input" ${itemData.showLabel ? 'checked' : ''}>
         <span>Mostrar nombre y cantidad</span>
       </label>
     </div>
     <div class="item-sliders">
-      <label>X: <input type="range" class="offset-x-input" value="${itemData.offsetX || 0}" min="-350" max="350" step="5"></label>
-      <label>Y: <input type="range" class="offset-y-input" value="${itemData.offsetY || 0}" min="-350" max="350" step="5"></label>
+      <label>X<input type="range" class="offset-x-input" value="${offsets[index]?.x || 0}" min="-350" max="350" step="5"></label>
+      <label>Y<input type="range" class="offset-y-input" value="${offsets[index]?.y || 0}" min="-350" max="350" step="5"></label>
     </div>
   `;
-  
-  // Event listeners para los inputs
-  const nameInput = li.querySelector('.name-input');
+
+  const categoryInput = li.querySelector('.category-select');
+  const customNameInput = li.querySelector('.custom-name-input');
   const valueInput = li.querySelector('.value-input');
   const imageInput = li.querySelector('.image-input');
   const imageRow = li.querySelector('.image-row');
+  const customNameRow = li.querySelector('.custom-name-row');
   const showLabelInput = li.querySelector('.show-label-input');
   const offsetXInput = li.querySelector('.offset-x-input');
   const offsetYInput = li.querySelector('.offset-y-input');
   const removeBtn = li.querySelector('.remove-btn');
-  
-  // Listener especial para el select de categoría
-  nameInput.addEventListener('change', (e) => {
-    const selectedCategory = e.target.value;
-    
-    // Mostrar/ocultar input de URL según si es Personalizado
-    imageRow.style.display = selectedCategory === 'Personalizado' ? 'flex' : 'none';
-    
-    if (selectedCategory !== 'Personalizado' && categories[selectedCategory]) {
-      imageInput.value = categories[selectedCategory];
-    } else {
-      imageInput.value = '';
+
+  categoryInput.addEventListener('change', (event) => {
+    const selected = event.target.value;
+    const showCustom = selected === 'Personalizado';
+    imageRow.style.display = showCustom ? 'block' : 'none';
+    customNameRow.style.display = showCustom ? 'block' : 'none';
+
+    if (!showCustom) {
+      imageInput.value = categories[selected] || '';
+      customNameInput.value = '';
     }
+
     updateData();
   });
-  
-  nameInput.addEventListener('change', updateData);
-  
-  // Listener para el checkbox de mostrar etiqueta
-  showLabelInput.addEventListener('change', updateData);
-  
-  [valueInput, imageInput].forEach(input => {
-    input.addEventListener('change', updateData);
+
+  [customNameInput, valueInput, imageInput].forEach((input) => {
     input.addEventListener('input', () => {
       clearTimeout(input.updateTimeout);
-      input.updateTimeout = setTimeout(updateData, 300);
+      input.updateTimeout = setTimeout(updateData, 180);
     });
+    input.addEventListener('change', updateData);
   });
-  
-  [offsetXInput, offsetYInput].forEach(slider => {
-    slider.addEventListener('input', updateData);
-    slider.addEventListener('change', updateData);
-  });
-  
-  removeBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    const idx = parseInt(li.dataset.index);
+
+  showLabelInput.addEventListener('change', updateData);
+  offsetXInput.addEventListener('input', updateData);
+  offsetYInput.addEventListener('input', updateData);
+
+  removeBtn.addEventListener('click', () => {
+    const idx = parseInt(li.dataset.index, 10);
     data.splice(idx, 1);
     offsets.splice(idx, 1);
-    li.remove();
+    populateEditor();
     updateData();
   });
-  
-  // Guardar color en el item data
-  itemData.color = color;
-  
+
   return li;
 }
 
 function addNewItem() {
-  // Seleccionar una categoría aleatoria (excepto Personalizado)
-  const categoryList = Object.keys(categories).filter(cat => cat !== 'Personalizado');
-  const randomCategory = categoryList[Math.floor(Math.random() * categoryList.length)];
-  
-  const newItem = {
-    name: randomCategory,
-    value: 1,
-    color: '#' + Math.floor(Math.random()*16777215).toString(16),
-    image: categories[randomCategory] || ''
-  };
-  
-  data.push(newItem);
+  const list = Object.keys(categories).filter((cat) => cat !== 'Personalizado');
+  const randomCategory = list[Math.floor(Math.random() * list.length)];
+
+  data.push(
+    ensureDefaults(
+      {
+        category: randomCategory,
+        name: randomCategory,
+        value: 1,
+        image: categories[randomCategory],
+        color: palette[data.length % palette.length],
+        showLabel: false
+      },
+      data.length
+    )
+  );
+
   offsets.push({ x: 0, y: 0 });
-  
-  const itemElement = createItemElement(data.length - 1, newItem);
-  dataList.appendChild(itemElement);
-  
+  populateEditor();
   updateData();
 }
 
@@ -570,43 +607,42 @@ function attachListeners() {
     editorPanel.classList.remove('hidden');
     editorOverlay.classList.remove('hidden');
   });
-  
-  downloadBtn.addEventListener('click', downloadChart);
-  shareBtn.addEventListener('click', shareEvent);
-  
-  addBtn.addEventListener('click', addNewItem);
-  
+
   closeBtn.addEventListener('click', () => {
     editorPanel.classList.add('hidden');
     editorOverlay.classList.add('hidden');
     updateData();
   });
-  
+
   editorOverlay.addEventListener('click', () => {
     editorPanel.classList.add('hidden');
     editorOverlay.classList.add('hidden');
     updateData();
   });
+
+  downloadBtn.addEventListener('click', downloadChart);
+  shareBtn.addEventListener('click', shareEvent);
+  addBtn.addEventListener('click', addNewItem);
+
+  eventTitleInput.addEventListener('input', saveToLocalStorage);
+}
+
+async function initializeApp() {
+  const loadedFromSupabase = await loadFromSupabaseEventId();
+  const loadedFromLegacy = loadedFromSupabase ? false : loadFromLegacyShareLink();
+
+  if (!loadedFromSupabase && !loadedFromLegacy) {
+    loadFromLocalStorage();
+  }
+
+  normalizeState();
+  populateEditor();
+  attachListeners();
+  drawPie();
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    // Intentar cargar desde un link compartido
-    if (!loadFromShareLink()) {
-      // Si no hay link compartido, cargar datos por defecto
-      populateEditor();
-    }
-    
-    attachListeners();
-    drawPie();
-  });
+  document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
-  // Intentar cargar desde un link compartido
-  if (!loadFromShareLink()) {
-    // Si no hay link compartido, cargar datos por defecto
-    populateEditor();
-  }
-  
-  attachListeners();
-  drawPie();
+  initializeApp();
 }

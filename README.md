@@ -1,6 +1,6 @@
-# Generador de Top 8/16 - Visualizador de Torneos
+# WebTop 16 - Visualizador de Torneos
 
-Una aplicación web interactiva para crear y compartir visualizaciones de resultados de torneos en forma de gráfico de pastel (pie chart). Perfecta para torneo de TCG, juegos competitivos y eventos similares.
+Aplicacion web interactiva para crear y compartir visualizaciones de resultados de torneos en forma de pie chart. Pensada para TCG y eventos competitivos.
 
 ## ✨ Características
 
@@ -13,7 +13,11 @@ Una aplicación web interactiva para crear y compartir visualizaciones de result
 - **Descarga de Imagen**: Exporta el gráfico como PNG con el título y todas las imágenes incluidas
 - **Compartir Eventos**: Genera links únicos para compartir tus eventos - los datos se guardan automáticamente
 - **Persistencia de Datos**: Los datos se guardan automáticamente en localStorage
-- **Diseño Responsivo**: Funciona perfectamente en desktop, tablet y móvil
+- **Diseño Pro**: Interfaz mas limpia, moderna y consistente
+- **Personalizado con Nombre**: La opcion `Personalizado` permite definir nombre + imagen
+- **Compartir con Supabase**: El link puede persistirse en base remota (`?event=...`)
+- **Fallback Local**: Si Supabase falla, mantiene link local en `?shared=...`
+- **Diseño Responsivo**: Funciona en desktop y movil
 
 ## 🚀 Inicio Rápido
 
@@ -70,13 +74,55 @@ let data = [
 └── .gitignore       # Archivos ignorados por Git
 ```
 
-## 💾 Cómo Funciona la Compartición
+## Supabase (Database)
 
-1. Al hacer clic en "Compartir", la aplicación genera un ID único
-2. Los datos se codifican en base64 y se guardan en localStorage
-3. Se genera un URL con el ID (ej: `?event=evt_1234567890`)
-4. Compartí el link con otros usuarios
-5. Cuando abren el link, los datos se cargan automáticamente
+La app usa `supabase-js` en frontend con una **publishable key**.
+
+### 1) Crear tabla
+
+Ejecuta esto en SQL Editor de Supabase:
+
+```sql
+create table if not exists public.shared_events (
+  id bigint generated always as identity primary key,
+  event_id text not null unique,
+  title text,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+```
+
+### 2) Activar RLS y policies publicas
+
+```sql
+alter table public.shared_events enable row level security;
+
+create policy "public_insert_shared_events"
+on public.shared_events
+for insert
+to anon
+with check (true);
+
+create policy "public_select_shared_events"
+on public.shared_events
+for select
+to anon
+using (true);
+```
+
+### 3) Configuracion actual
+
+- `SUPABASE_URL`: `https://ddsjuhygkfamlsqnkafr.supabase.co`
+- `SUPABASE_PUBLISHABLE_KEY`: cargada en `script.js`
+
+Importante: la `secret key` nunca debe ir en frontend. Si se expuso, rotala en Supabase.
+
+## Comparticion
+
+1. Al hacer clic en `Compartir`, intenta guardar en Supabase.
+2. Si guarda ok, genera URL como `?event=evt_xxx`.
+3. Si no guarda, usa fallback local con `?shared=...`.
+4. Al abrir el link, intenta cargar primero de Supabase.
 
 ## 🌐 Preparación para GitHub Pages
 

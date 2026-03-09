@@ -3,21 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top 8</title>
+    <title>WebTop 16</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="page-glow"></div>
     <div class="container">
-        <h1>Generador de distribución de decks</h1>
-        
+        <header class="page-header">
+            <p class="eyebrow">Tournament Visualizer</p>
+            <h1>WebTop 16</h1>
+            <p class="subtitle">Crea, personaliza y comparte distribuciones de decks con un look más limpio y listo para publicar.</p>
+        </header>
+
         <div class="main-content">
-            <input type="text" id="event-title" class="event-title" placeholder="Nombre de evento" value="Nombre de evento">
-            <svg id="pie-svg" width="700" height="700"></svg>
+            <input type="text" id="event-title" class="event-title" placeholder="Nombre del evento" value="Nombre del evento">
+            <svg id="pie-svg" width="700" height="700" aria-label="Grafico de distribucion"></svg>
         </div>
 
-        <button id="edit-btn" class="edit-btn">⚙️ Editar</button>
-        <button id="download-btn" class="download-btn">⬇️ Descargar</button>
-        <button id="share-btn" class="share-btn">🔗 Compartir</button>
+        <div class="actions">
+            <button id="edit-btn" class="action-btn action-primary">Editar</button>
+            <button id="download-btn" class="action-btn">Descargar</button>
+            <button id="share-btn" class="action-btn">Compartir</button>
+        </div>
 
         <div id="editor-overlay" class="editor-overlay hidden"></div>
 
@@ -27,11 +37,12 @@
                 <button id="add-btn" class="add-btn" title="Agregar nuevo item">+</button>
                 <button id="close-btn" class="close-btn">✕</button>
             </div>
-            
+
             <ul id="data-list" class="editor-list"></ul>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </body>
 </html>
