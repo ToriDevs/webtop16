@@ -628,6 +628,7 @@ function showSharePreviewModal(shareUrl, previewImageDataUrl) {
   const row = document.createElement('div');
   row.style.display = 'flex';
   row.style.gap = '8px';
+  row.style.flexWrap = 'wrap';
 
   const copyBtn = document.createElement('button');
   copyBtn.textContent = 'Copiar link';
@@ -638,6 +639,7 @@ function showSharePreviewModal(shareUrl, previewImageDataUrl) {
   copyBtn.style.color = '#EAF7FF';
   copyBtn.style.borderRadius = '8px';
   copyBtn.style.cursor = 'pointer';
+  copyBtn.style.minWidth = '160px';
 
   const closeBtn = document.createElement('button');
   closeBtn.textContent = 'Cerrar';
@@ -648,6 +650,7 @@ function showSharePreviewModal(shareUrl, previewImageDataUrl) {
   closeBtn.style.color = '#EAF7FF';
   closeBtn.style.borderRadius = '8px';
   closeBtn.style.cursor = 'pointer';
+  closeBtn.style.minWidth = '120px';
 
   copyBtn.addEventListener('click', async () => {
     try {
