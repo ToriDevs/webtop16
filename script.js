@@ -3,6 +3,7 @@ const editBtn = document.getElementById('edit-btn');
 const downloadBtn = document.getElementById('download-btn');
 const shareBtn = document.getElementById('share-btn');
 const addBtn = document.getElementById('add-btn');
+const resetBtn = document.getElementById('reset-btn');
 const closeBtn = document.getElementById('close-btn');
 const editorPanel = document.getElementById('editor-panel');
 const editorOverlay = document.getElementById('editor-overlay');
@@ -38,7 +39,7 @@ const categories = {
 
 const palette = ['#EE6C4D', '#3D5A80', '#2A9D8F', '#E9C46A', '#F4A261', '#4D908E', '#577590', '#BC6C25', '#6D597A', '#4361EE'];
 
-let data = [
+const INITIAL_DATA = [
   { category: 'Draven', name: 'Draven', customName: '', value: 7, color: '#EE6C4D', image: '', showLabel: false },
   { category: 'Irelia', name: 'Irelia', customName: '', value: 2, color: '#3D5A80', image: '', showLabel: false },
   { category: 'Ezreal', name: 'Ezreal', customName: '', value: 2, color: '#2A9D8F', image: '', showLabel: false },
@@ -48,6 +49,8 @@ let data = [
   { category: 'Sivir', name: 'Sivir', customName: '', value: 1, color: '#577590', image: '', showLabel: false },
   { category: "Rek'sai", name: "Rek'sai", customName: '', value: 1, color: '#BC6C25', image: '', showLabel: false }
 ];
+
+let data = JSON.parse(JSON.stringify(INITIAL_DATA));
 
 let offsets = Array.from({ length: data.length }, () => ({ x: 0, y: 0 }));
 
@@ -306,7 +309,7 @@ async function imageToBase64(url) {
   });
 }
 
-async function downloadChart() {
+async function renderChartCanvas() {
   const eventTitle = eventTitleInput.value || 'Top 16';
   const svgElement = svg.cloneNode(true);
   const base64Images = await Promise.all(data.map((item) => imageToBase64(item.image)));
@@ -357,30 +360,35 @@ async function downloadChart() {
   canvas.height = 900;
 
   const ctx = canvas.getContext('2d');
-  const img = new Image();
 
-  img.onload = () => {
-    ctx.fillStyle = '#0A111C';
-    ctx.fillRect(0, 0, 800, 900);
-    ctx.drawImage(img, 0, 0);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
 
+    img.onload = () => {
+      ctx.fillStyle = '#0A111C';
+      ctx.fillRect(0, 0, 800, 900);
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas);
+    };
+
+    img.onerror = () => reject(new Error('No se pudo renderizar la previsualizacion'));
+    img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
+  });
+}
+
+async function downloadChart() {
+  const eventTitle = eventTitleInput.value || 'Top 16';
+
+  try {
+    const canvas = await renderChartCanvas();
     const link = document.createElement('a');
     link.href = canvas.toDataURL('image/png');
     link.download = `${eventTitle.replace(/\s+/g, '-')}-${Date.now()}.png`;
     link.click();
-  };
-
-  img.onerror = () => {
-    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${eventTitle.replace(/\s+/g, '-')}-${Date.now()}.svg`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
+  } catch (error) {
+    console.error('Download render error:', error);
+    alert('No se pudo generar la imagen para descargar.');
+  }
 }
 
 function randomShareId() {
@@ -398,14 +406,49 @@ function createEventSlug(title) {
     .slice(0, 64) || 'evento';
 }
 
+function getSharedRouteParts() {
+  const hash = window.location.hash || '';
+  const cleanHash = hash.replace(/^#\/?/, '');
+  if (!cleanHash) {
+    return null;
+  }
+
+  const parts = cleanHash.split('/').map((part) => decodeURIComponent(part.trim())).filter(Boolean);
+  if (parts.length < 2) {
+    return null;
+  }
+
+  return {
+    slug: parts[0],
+    eventId: parts[1]
+  };
+}
+
+function buildPrettyShareUrl(baseUrl, slug, eventId) {
+  return `${baseUrl}#/${encodeURIComponent(slug)}/${encodeURIComponent(eventId)}`;
+}
+
+function getEventIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const queryEventId = params.get('event');
+  if (queryEventId) {
+    return queryEventId;
+  }
+
+  const routeParts = getSharedRouteParts();
+  return routeParts ? routeParts.eventId : '';
+}
+
 function getTitleFromUrlParam() {
   const params = new URLSearchParams(window.location.search);
   const slug = params.get('nombre');
-  if (!slug) {
+  const routeSlug = getSharedRouteParts()?.slug || '';
+  const finalSlug = slug || routeSlug;
+  if (!finalSlug) {
     return '';
   }
 
-  return slug
+  return finalSlug
     .split('-')
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -459,8 +502,7 @@ function loadSharedEventFromLocal(eventId) {
 }
 
 async function loadFromEventId() {
-  const params = new URLSearchParams(window.location.search);
-  const eventId = params.get('event');
+  const eventId = getEventIdFromUrl();
 
   if (!eventId) {
     return false;
@@ -518,10 +560,125 @@ function loadFromLegacyShareLink() {
   }
 }
 
+function showSharePreviewModal(shareUrl, previewImageDataUrl) {
+  const previous = document.getElementById('share-preview-modal');
+  if (previous) {
+    previous.remove();
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'share-preview-modal';
+  modal.style.position = 'fixed';
+  modal.style.inset = '0';
+  modal.style.zIndex = '2000';
+  modal.style.background = 'rgba(3, 8, 15, 0.75)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  modal.style.padding = '18px';
+
+  const card = document.createElement('div');
+  card.style.width = 'min(860px, 96vw)';
+  card.style.maxHeight = '92vh';
+  card.style.overflow = 'auto';
+  card.style.background = '#0B131F';
+  card.style.border = '1px solid rgba(148, 163, 184, 0.35)';
+  card.style.borderRadius = '14px';
+  card.style.padding = '16px';
+  card.style.boxShadow = '0 18px 46px rgba(0, 0, 0, 0.5)';
+
+  const title = document.createElement('h3');
+  title.textContent = 'Previsualizacion del enlace';
+  title.style.margin = '0 0 12px';
+  title.style.color = '#E6EEF8';
+  title.style.fontFamily = 'Space Grotesk, sans-serif';
+
+  const image = document.createElement('img');
+  image.src = previewImageDataUrl;
+  image.alt = 'Previsualizacion del evento';
+  image.style.width = '100%';
+  image.style.borderRadius = '10px';
+  image.style.border = '1px solid rgba(148, 163, 184, 0.3)';
+  image.style.marginBottom = '12px';
+
+  const linkBox = document.createElement('input');
+  linkBox.type = 'text';
+  linkBox.value = shareUrl;
+  linkBox.readOnly = true;
+  linkBox.style.width = '100%';
+  linkBox.style.padding = '10px';
+  linkBox.style.borderRadius = '8px';
+  linkBox.style.border = '1px solid rgba(148, 163, 184, 0.4)';
+  linkBox.style.background = 'rgba(7, 14, 24, 0.85)';
+  linkBox.style.color = '#D8E6F5';
+  linkBox.style.marginBottom = '12px';
+
+  const row = document.createElement('div');
+  row.style.display = 'flex';
+  row.style.gap = '8px';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.textContent = 'Copiar link';
+  copyBtn.style.flex = '1';
+  copyBtn.style.padding = '10px';
+  copyBtn.style.border = '1px solid rgba(57, 208, 255, 0.55)';
+  copyBtn.style.background = 'rgba(57, 208, 255, 0.18)';
+  copyBtn.style.color = '#EAF7FF';
+  copyBtn.style.borderRadius = '8px';
+  copyBtn.style.cursor = 'pointer';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Cerrar';
+  closeBtn.style.flex = '1';
+  closeBtn.style.padding = '10px';
+  closeBtn.style.border = '1px solid rgba(148, 163, 184, 0.35)';
+  closeBtn.style.background = 'rgba(18, 27, 40, 0.9)';
+  closeBtn.style.color = '#EAF7FF';
+  closeBtn.style.borderRadius = '8px';
+  closeBtn.style.cursor = 'pointer';
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      copyBtn.textContent = 'Link copiado';
+    } catch (error) {
+      linkBox.select();
+      document.execCommand('copy');
+      copyBtn.textContent = 'Link copiado';
+    }
+  });
+
+  const closeModal = () => modal.remove();
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  row.appendChild(copyBtn);
+  row.appendChild(closeBtn);
+  card.appendChild(title);
+  card.appendChild(image);
+  card.appendChild(linkBox);
+  card.appendChild(row);
+  modal.appendChild(card);
+  document.body.appendChild(modal);
+}
+
 async function shareEvent() {
   const payload = buildEventPayload();
   const baseUrl = `${window.location.origin}${window.location.pathname}`;
   const slug = createEventSlug(payload.title);
+
+  let previewImageDataUrl = '';
+  try {
+    const previewCanvas = await renderChartCanvas();
+    previewImageDataUrl = previewCanvas.toDataURL('image/jpeg', 0.88);
+    payload.previewImage = previewImageDataUrl;
+  } catch (error) {
+    console.error('Preview render error:', error);
+  }
 
   const generatedEventId = randomShareId();
   const supabaseResult = await saveEventToSupabase(payload);
@@ -531,19 +688,28 @@ async function shareEvent() {
     saveSharedEventToLocal(finalEventId, payload);
   }
 
-  const shareUrl = `${baseUrl}?event=${encodeURIComponent(finalEventId)}&nombre=${encodeURIComponent(slug)}`;
+  const shareUrl = buildPrettyShareUrl(baseUrl, slug, finalEventId);
 
   if (navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      const backendMessage = supabaseResult.eventId
-        ? 'Guardado en Supabase y copiado al portapapeles.'
-        : 'Copiado con fallback local. En otros dispositivos requiere Supabase activo.';
-      alert(`Link listo. ${backendMessage}`);
+      if (previewImageDataUrl) {
+        showSharePreviewModal(shareUrl, previewImageDataUrl);
+      } else {
+        const backendMessage = supabaseResult.eventId
+          ? 'Guardado en Supabase y copiado al portapapeles.'
+          : 'Copiado con fallback local. En otros dispositivos requiere Supabase activo.';
+        alert(`Link listo. ${backendMessage}`);
+      }
       return;
     } catch (error) {
       console.error('Clipboard error:', error);
     }
+  }
+
+  if (previewImageDataUrl) {
+    showSharePreviewModal(shareUrl, previewImageDataUrl);
+    return;
   }
 
   prompt('Copia y comparte este link:', shareUrl);
@@ -688,6 +854,18 @@ function attachListeners() {
   downloadBtn.addEventListener('click', downloadChart);
   shareBtn.addEventListener('click', shareEvent);
   addBtn.addEventListener('click', addNewItem);
+  resetBtn.addEventListener('click', () => {
+    if (!window.confirm('Se reseteara todo el evento actual. Quieres continuar?')) {
+      return;
+    }
+
+    data = JSON.parse(JSON.stringify(INITIAL_DATA));
+    offsets = Array.from({ length: data.length }, () => ({ x: 0, y: 0 }));
+    eventTitleInput.value = 'Nombre del evento';
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    populateEditor();
+    drawPie();
+  });
 
   eventTitleInput.addEventListener('input', saveToLocalStorage);
 }
