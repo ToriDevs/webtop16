@@ -13,6 +13,7 @@ const centerX = 350;
 const centerY = 350;
 const radius = 280;
 const LOCAL_STORAGE_KEY = 'tournament_data';
+const SHARED_EVENT_PREFIX = 'shared_event_';
 
 const SUPABASE_URL = 'https://ddsjuhygkfamlsqnkafr.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_fQG7Ih4_TyJQnSGws1x7lw_FNMyl_Hg';
@@ -414,7 +415,7 @@ function getTitleFromUrlParam() {
 
 async function saveEventToSupabase(eventPayload) {
   if (!supabaseClient) {
-    return null;
+    return { eventId: null, source: 'none' };
   }
 
   const eventId = randomShareId();
@@ -426,33 +427,69 @@ async function saveEventToSupabase(eventPayload) {
 
   if (error) {
     console.error('Supabase save error:', error);
-    return null;
+    return { eventId: null, source: 'none' };
   }
 
-  return eventId;
+  return { eventId, source: 'supabase' };
 }
 
-async function loadFromSupabaseEventId() {
+function saveSharedEventToLocal(eventId, eventPayload) {
+  try {
+    const key = `${SHARED_EVENT_PREFIX}${eventId}`;
+    localStorage.setItem(key, JSON.stringify(eventPayload));
+    return true;
+  } catch (error) {
+    console.error('Local shared save error:', error);
+    return false;
+  }
+}
+
+function loadSharedEventFromLocal(eventId) {
+  try {
+    const key = `${SHARED_EVENT_PREFIX}${eventId}`;
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      return null;
+    }
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error('Local shared load error:', error);
+    return null;
+  }
+}
+
+async function loadFromEventId() {
   const params = new URLSearchParams(window.location.search);
   const eventId = params.get('event');
 
-  if (!eventId || !supabaseClient) {
+  if (!eventId) {
     return false;
   }
 
-  const { data: row, error } = await supabaseClient
-    .from('shared_events')
-    .select('payload')
-    .eq('event_id', eventId)
-    .single();
+  if (supabaseClient) {
+    const { data: row, error } = await supabaseClient
+      .from('shared_events')
+      .select('payload')
+      .eq('event_id', eventId)
+      .single();
 
-  if (error || !row?.payload) {
-    console.error('Supabase load error:', error);
-    return false;
+    if (!error && row?.payload) {
+      applyEventState(row.payload);
+      return true;
+    }
+
+    if (error) {
+      console.error('Supabase load error:', error);
+    }
   }
 
-  applyEventState(row.payload);
-  return true;
+  const localPayload = loadSharedEventFromLocal(eventId);
+  if (localPayload) {
+    applyEventState(localPayload);
+    return true;
+  }
+
+  return false;
 }
 
 function generateLegacyShareLink() {
@@ -486,21 +523,22 @@ async function shareEvent() {
   const baseUrl = `${window.location.origin}${window.location.pathname}`;
   const slug = createEventSlug(payload.title);
 
-  let shareUrl = generateLegacyShareLink();
-  let usedSupabase = false;
+  const generatedEventId = randomShareId();
+  const supabaseResult = await saveEventToSupabase(payload);
+  const finalEventId = supabaseResult.eventId || generatedEventId;
 
-  const supabaseEventId = await saveEventToSupabase(payload);
-  if (supabaseEventId) {
-    shareUrl = `${baseUrl}?event=${encodeURIComponent(supabaseEventId)}&nombre=${encodeURIComponent(slug)}`;
-    usedSupabase = true;
+  if (!supabaseResult.eventId) {
+    saveSharedEventToLocal(finalEventId, payload);
   }
+
+  const shareUrl = `${baseUrl}?event=${encodeURIComponent(finalEventId)}&nombre=${encodeURIComponent(slug)}`;
 
   if (navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      const backendMessage = usedSupabase
+      const backendMessage = supabaseResult.eventId
         ? 'Guardado en Supabase y copiado al portapapeles.'
-        : 'Copiado en modo local (fallback).';
+        : 'Copiado con fallback local. En otros dispositivos requiere Supabase activo.';
       alert(`Link listo. ${backendMessage}`);
       return;
     } catch (error) {
@@ -655,10 +693,10 @@ function attachListeners() {
 }
 
 async function initializeApp() {
-  const loadedFromSupabase = await loadFromSupabaseEventId();
-  const loadedFromLegacy = loadedFromSupabase ? false : loadFromLegacyShareLink();
+  const loadedFromEvent = await loadFromEventId();
+  const loadedFromLegacy = loadedFromEvent ? false : loadFromLegacyShareLink();
 
-  if (!loadedFromSupabase && !loadedFromLegacy) {
+  if (!loadedFromEvent && !loadedFromLegacy) {
     loadFromLocalStorage();
   }
 
