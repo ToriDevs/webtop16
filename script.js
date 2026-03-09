@@ -27,7 +27,7 @@ const categories = {
 };
 
 let data = [
-  { name: 'Draven', value: 7, color: '#FF6B6B', image: 'https://tcgplayer-cdn.tcgplayer.com/product/663442_in_1000x1000.jpg', showLabel: false },
+  { name: 'Draven', value: 7, color: '#FF6B6B', image: '', showLabel: false },
   { name: 'Irelia', value: 2, color: '#4ECDC4', image: '', showLabel: false },
   { name: 'Ezreal', value: 2, color: '#45B7D1', image: '', showLabel: false },
   { name: 'Viktor', value: 1, color: '#FFA07A', image: '', showLabel: false },
@@ -342,64 +342,104 @@ function loadFromLocalStorage() {
 }
 
 function generateShareLink() {
-  const eventTitle = document.getElementById('event-title').value || 'Top 8';
-  const encoded = btoa(JSON.stringify({ title: eventTitle, data: data }));
-  const shortId = 'evt_' + Date.now();
-  localStorage.setItem(shortId, encoded);
+  const eventTitle = document.getElementById('event-title').value || 'Nombre de evento';
+  const eventData = {
+    title: eventTitle,
+    data: data,
+    offsets: offsets
+  };
   
-  const shareUrl = `${window.location.origin}${window.location.pathname}?event=${shortId}`;
+  // Codificar los datos en Base64 para pasar en la URL
+  const encoded = btoa(JSON.stringify(eventData));
+  
+  // Crear URL con los datos codificados
+  const baseUrl = window.location.origin + window.location.pathname;
+  const shareUrl = `${baseUrl}?shared=${encodeURIComponent(encoded)}`;
+  
   return shareUrl;
 }
 
 function loadFromShareLink() {
   const params = new URLSearchParams(window.location.search);
-  const eventId = params.get('event');
+  const encodedData = params.get('shared');
   
-  if (eventId) {
-    const encoded = localStorage.getItem(eventId);
-    if (encoded) {
-      try {
-        const eventData = JSON.parse(atob(encoded));
+  if (encodedData) {
+    try {
+      const eventData = JSON.parse(atob(decodeURIComponent(encodedData)));
+      
+      // Cargar datos
+      if (eventData.title) {
         document.getElementById('event-title').value = eventData.title;
-        data = eventData.data;
-        // Actualizar offsets array si es necesario
-        while (offsets.length < data.length) {
-          offsets.push({ x: 0, y: 0 });
-        }
-        drawPie();
-        populateEditor();
-        return true;
-      } catch (e) {
-        console.error('Error loading event:', e);
-        return false;
       }
+      if (eventData.data && Array.isArray(eventData.data)) {
+        data = eventData.data;
+      }
+      if (eventData.offsets && Array.isArray(eventData.offsets)) {
+        offsets = eventData.offsets;
+      }
+      
+      // Asegurar que los arrays tengan el mismo tamaño
+      while (offsets.length < data.length) {
+        offsets.push({ x: 0, y: 0 });
+      }
+      
+      drawPie();
+      populateEditor();
+      return true;
+    } catch (e) {
+      console.error('Error loading shared event:', e);
+      return false;
     }
   }
   return false;
 }
 
 function shareEvent() {
-  saveToLocalStorage();
   const shareUrl = generateShareLink();
   
   // Copiar al portapapeles
   if (navigator.clipboard) {
     navigator.clipboard.writeText(shareUrl).then(() => {
-      alert('¡Link copiado al portapapeles!\n\n' + shareUrl);
+      alert('✅ ¡Link copiado al portapapeles!\n\nPuede compartir este link con otros usuarios y verán exactamente tu evento con todos los datos.');
     }).catch(() => {
       // Fallback si clipboard falla
-      const textarea = document.createElement('textarea');
-      textarea.value = shareUrl;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      alert('¡Link copiado al portapapeles!\n\n' + shareUrl);
+      mostrarURLEnModal(shareUrl);
     });
   } else {
     // Fallback para navegadores antiguos
-    alert('URL del evento:\n\n' + shareUrl);
+    mostrarURLEnModal(shareUrl);
   }
+}
+
+function mostrarURLEnModal(url) {
+  const textarea = document.createElement('textarea');
+  textarea.value = url;
+  textarea.style.position = 'fixed';
+  textarea.style.top = '50%';
+  textarea.style.left = '50%';
+  textarea.style.transform = 'translate(-50%, -50%)';
+  textarea.style.zIndex = '99999';
+  textarea.style.width = '80%';
+  textarea.style.height = '200px';
+  textarea.style.padding = '10px';
+  textarea.style.fontSize = '12px';
+  textarea.style.fontFamily = 'monospace';
+  textarea.style.backgroundColor = '#222';
+  textarea.style.color = '#00d4ff';
+  textarea.style.border = '2px solid #00d4ff';
+  textarea.style.borderRadius = '8px';
+  
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    document.execCommand('copy');
+    alert('✅ Link copiado al portapapeles desde el modal');
+  } catch (err) {
+    alert('Link de compartición:\n\n' + url);
+  }
+  
+  document.body.removeChild(textarea);
 }
 
 function populateEditor() {
