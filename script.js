@@ -9,6 +9,9 @@ const editorPanel = document.getElementById('editor-panel');
 const editorOverlay = document.getElementById('editor-overlay');
 const dataList = document.getElementById('data-list');
 const eventTitleInput = document.getElementById('event-title');
+const langEsBtn = document.getElementById('lang-es');
+const langEnBtn = document.getElementById('lang-en');
+const langFrBtn = document.getElementById('lang-fr');
 
 const CHART_SIZE = 700;
 const centerX = CHART_SIZE / 2;
@@ -16,7 +19,7 @@ const centerY = CHART_SIZE / 2;
 const radius = CHART_SIZE / 2 - 40;
 const LOCAL_STORAGE_KEY = 'tournament_data';
 const SHARED_EVENT_PREFIX = 'shared_event_';
-const DEFAULT_EVENT_TITLE = 'Nombre del evento';
+const LANGUAGE_STORAGE_KEY = 'ui_language';
 
 const SUPABASE_URL = 'https://ddsjuhygkfamlsqnkafr.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_fQG7Ih4_TyJQnSGws1x7lw_FNMyl_Hg';
@@ -40,6 +43,136 @@ const categories = {
 };
 
 const palette = ['#EE6C4D', '#3D5A80', '#2A9D8F', '#E9C46A', '#F4A261', '#4D908E', '#577590', '#BC6C25', '#6D597A', '#4361EE'];
+
+const I18N = {
+  es: {
+    eyebrow: 'Visualizador de Torneos',
+    title: 'Generador de Participacion',
+    subtitle: 'Crea, personaliza y comparte distribuciones de decks con un look limpio y listo para publicar.',
+    edit: 'Editar',
+    download: 'Descargar',
+    share: 'Compartir',
+    editData: 'Editar Datos',
+    reset: 'Reset',
+    defaultEventTitle: 'Nombre del evento',
+    eventPlaceholder: 'Nombre del evento',
+    chartLabel: 'Grafico de distribucion',
+    customNamePlaceholder: 'Nombre personalizado',
+    customImagePlaceholder: 'URL de imagen personalizada',
+    showLabel: 'Mostrar nombre y cantidad',
+    sharePreviewTitle: 'Previsualizacion del enlace',
+    sharePreviewAlt: 'Previsualizacion del evento',
+    copyLink: 'Copiar link',
+    linkCopied: 'Link copiado',
+    close: 'Cerrar',
+    resetConfirm: 'Se reseteara todo el evento actual. Quieres continuar?',
+    downloadError: 'No se pudo generar la imagen para descargar.',
+    previewError: 'No se pudo renderizar la previsualizacion',
+    shareSaved: 'Guardado en Supabase y copiado al portapapeles.',
+    shareFallback: 'Copiado con fallback local. En otros dispositivos requiere Supabase activo.',
+    shareReady: 'Link listo.',
+    copyPrompt: 'Copia y comparte este link:'
+  },
+  en: {
+    eyebrow: 'Tournament Visualizer',
+    title: 'Participation Generator',
+    subtitle: 'Create, customize and share deck distribution visuals with a clean look ready to publish.',
+    edit: 'Edit',
+    download: 'Download',
+    share: 'Share',
+    editData: 'Edit Data',
+    reset: 'Reset',
+    defaultEventTitle: 'Event name',
+    eventPlaceholder: 'Event name',
+    chartLabel: 'Distribution chart',
+    customNamePlaceholder: 'Custom name',
+    customImagePlaceholder: 'Custom image URL',
+    showLabel: 'Show name and amount',
+    sharePreviewTitle: 'Link preview',
+    sharePreviewAlt: 'Event preview',
+    copyLink: 'Copy link',
+    linkCopied: 'Link copied',
+    close: 'Close',
+    resetConfirm: 'This will reset the current event. Continue?',
+    downloadError: 'Could not generate the image for download.',
+    previewError: 'Could not render preview image',
+    shareSaved: 'Saved in Supabase and copied to clipboard.',
+    shareFallback: 'Copied with local fallback. Other devices require Supabase.',
+    shareReady: 'Link ready.',
+    copyPrompt: 'Copy and share this link:'
+  },
+  fr: {
+    eyebrow: 'Visualiseur de Tournois',
+    title: 'Generateur de Participation',
+    subtitle: 'Creez, personnalisez et partagez des repartitions de decks avec un rendu propre et pret a publier.',
+    edit: 'Modifier',
+    download: 'Telecharger',
+    share: 'Partager',
+    editData: 'Modifier les donnees',
+    reset: 'Reset',
+    defaultEventTitle: "Nom de l'evenement",
+    eventPlaceholder: "Nom de l'evenement",
+    chartLabel: 'Graphique de repartition',
+    customNamePlaceholder: 'Nom personnalise',
+    customImagePlaceholder: "URL de l'image personnalisee",
+    showLabel: 'Afficher nom et quantite',
+    sharePreviewTitle: 'Apercu du lien',
+    sharePreviewAlt: "Apercu de l'evenement",
+    copyLink: 'Copier le lien',
+    linkCopied: 'Lien copie',
+    close: 'Fermer',
+    resetConfirm: "Cela va reinitialiser l'evenement actuel. Continuer ?",
+    downloadError: "Impossible de generer l'image a telecharger.",
+    previewError: "Impossible de generer l'apercu",
+    shareSaved: 'Sauvegarde sur Supabase et copie dans le presse-papiers.',
+    shareFallback: 'Copie avec fallback local. Les autres appareils necessitent Supabase.',
+    shareReady: 'Lien pret.',
+    copyPrompt: 'Copiez et partagez ce lien :'
+  }
+};
+
+let currentLanguage = 'en';
+
+function t(key) {
+  const langPack = I18N[currentLanguage] || I18N.en;
+  return langPack[key] || I18N.en[key] || key;
+}
+
+function isDefaultTitle(value) {
+  const normalized = (value || '').trim();
+  return Object.values(I18N).some((pack) => pack.defaultEventTitle === normalized);
+}
+
+function applyTranslations() {
+  document.documentElement.lang = currentLanguage;
+
+  document.querySelectorAll('[data-i18n]').forEach((node) => {
+    const key = node.getAttribute('data-i18n');
+    node.textContent = t(key);
+  });
+
+  eventTitleInput.placeholder = t('eventPlaceholder');
+  if (!eventTitleInput.value || isDefaultTitle(eventTitleInput.value)) {
+    eventTitleInput.value = t('defaultEventTitle');
+  }
+
+  svg.setAttribute('aria-label', t('chartLabel'));
+  addBtn.title = t('editData');
+  resetBtn.title = t('reset');
+
+  [langEsBtn, langEnBtn, langFrBtn].forEach((btn) => btn.classList.remove('is-active'));
+  const activeBtn = currentLanguage === 'es' ? langEsBtn : currentLanguage === 'fr' ? langFrBtn : langEnBtn;
+  activeBtn.classList.add('is-active');
+
+  populateEditor();
+  drawPie();
+}
+
+function setLanguage(nextLanguage) {
+  currentLanguage = I18N[nextLanguage] ? nextLanguage : 'en';
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage);
+  applyTranslations();
+}
 
 const INITIAL_DATA = [
   { category: 'Draven', name: 'Draven', customName: '', value: 7, color: '#EE6C4D', image: '', showLabel: false },
@@ -216,7 +349,7 @@ function buildEventPayload() {
 
 function getCurrentEventTitle() {
   const value = eventTitleInput.value ? eventTitleInput.value.trim() : '';
-  return value || DEFAULT_EVENT_TITLE;
+  return value || t('defaultEventTitle');
 }
 
 function saveToLocalStorage() {
@@ -386,7 +519,7 @@ async function renderChartCanvas() {
       resolve(canvas);
     };
 
-    img.onerror = () => reject(new Error('No se pudo renderizar la previsualizacion'));
+    img.onerror = () => reject(new Error(t('previewError')));
     img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
   });
 }
@@ -402,7 +535,7 @@ async function downloadChart() {
     link.click();
   } catch (error) {
     console.error('Download render error:', error);
-    alert('No se pudo generar la imagen para descargar.');
+    alert(t('downloadError'));
   }
 }
 
@@ -603,14 +736,14 @@ function showSharePreviewModal(shareUrl, previewImageDataUrl) {
   card.style.boxShadow = '0 18px 46px rgba(0, 0, 0, 0.5)';
 
   const title = document.createElement('h3');
-  title.textContent = 'Previsualizacion del enlace';
+  title.textContent = t('sharePreviewTitle');
   title.style.margin = '0 0 12px';
   title.style.color = '#E6EEF8';
   title.style.fontFamily = 'Space Grotesk, sans-serif';
 
   const image = document.createElement('img');
   image.src = previewImageDataUrl;
-  image.alt = 'Previsualizacion del evento';
+  image.alt = t('sharePreviewAlt');
   image.style.width = '100%';
   image.style.borderRadius = '10px';
   image.style.border = '1px solid rgba(148, 163, 184, 0.3)';
@@ -634,7 +767,7 @@ function showSharePreviewModal(shareUrl, previewImageDataUrl) {
   row.style.flexWrap = 'wrap';
 
   const copyBtn = document.createElement('button');
-  copyBtn.textContent = 'Copiar link';
+  copyBtn.textContent = t('copyLink');
   copyBtn.style.flex = '1';
   copyBtn.style.padding = '10px';
   copyBtn.style.border = '1px solid rgba(57, 208, 255, 0.55)';
@@ -645,7 +778,7 @@ function showSharePreviewModal(shareUrl, previewImageDataUrl) {
   copyBtn.style.minWidth = '160px';
 
   const closeBtn = document.createElement('button');
-  closeBtn.textContent = 'Cerrar';
+  closeBtn.textContent = t('close');
   closeBtn.style.flex = '1';
   closeBtn.style.padding = '10px';
   closeBtn.style.border = '1px solid rgba(148, 163, 184, 0.35)';
@@ -658,11 +791,11 @@ function showSharePreviewModal(shareUrl, previewImageDataUrl) {
   copyBtn.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      copyBtn.textContent = 'Link copiado';
+      copyBtn.textContent = t('linkCopied');
     } catch (error) {
       linkBox.select();
       document.execCommand('copy');
-      copyBtn.textContent = 'Link copiado';
+      copyBtn.textContent = t('linkCopied');
     }
   });
 
@@ -714,10 +847,8 @@ async function shareEvent() {
       if (previewImageDataUrl) {
         showSharePreviewModal(shareUrl, previewImageDataUrl);
       } else {
-        const backendMessage = supabaseResult.eventId
-          ? 'Guardado en Supabase y copiado al portapapeles.'
-          : 'Copiado con fallback local. En otros dispositivos requiere Supabase activo.';
-        alert(`Link listo. ${backendMessage}`);
+        const backendMessage = supabaseResult.eventId ? t('shareSaved') : t('shareFallback');
+        alert(`${t('shareReady')} ${backendMessage}`);
       }
       return;
     } catch (error) {
@@ -730,7 +861,7 @@ async function shareEvent() {
     return;
   }
 
-  prompt('Copia y comparte este link:', shareUrl);
+  prompt(t('copyPrompt'), shareUrl);
 }
 
 function populateEditor() {
@@ -763,15 +894,15 @@ function createItemElement(index, itemData) {
       <button class="remove-btn" type="button">-</button>
     </div>
     <div class="item-row custom-name-row" style="display:${isCustom ? 'block' : 'none'};">
-      <input type="text" class="custom-name-input" placeholder="Nombre personalizado" value="${customName}">
+      <input type="text" class="custom-name-input" placeholder="${t('customNamePlaceholder')}" value="${customName}">
     </div>
     <div class="item-row image-row" style="display:${isCustom ? 'block' : 'none'};">
-      <input type="text" class="image-input" placeholder="URL de imagen personalizada" value="${isCustom ? itemData.image || '' : ''}">
+      <input type="text" class="image-input" placeholder="${t('customImagePlaceholder')}" value="${isCustom ? itemData.image || '' : ''}">
     </div>
     <div class="item-row checkbox-row">
       <label class="label-checkbox">
         <input type="checkbox" class="show-label-input" ${itemData.showLabel ? 'checked' : ''}>
-        <span>Mostrar nombre y cantidad</span>
+        <span>${t('showLabel')}</span>
       </label>
     </div>
     <div class="item-sliders">
@@ -872,14 +1003,17 @@ function attachListeners() {
   downloadBtn.addEventListener('click', downloadChart);
   shareBtn.addEventListener('click', shareEvent);
   addBtn.addEventListener('click', addNewItem);
+  langEsBtn.addEventListener('click', () => setLanguage('es'));
+  langEnBtn.addEventListener('click', () => setLanguage('en'));
+  langFrBtn.addEventListener('click', () => setLanguage('fr'));
   resetBtn.addEventListener('click', () => {
-    if (!window.confirm('Se reseteara todo el evento actual. Quieres continuar?')) {
+    if (!window.confirm(t('resetConfirm'))) {
       return;
     }
 
     data = JSON.parse(JSON.stringify(INITIAL_DATA));
     offsets = Array.from({ length: data.length }, () => ({ x: 0, y: 0 }));
-    eventTitleInput.value = DEFAULT_EVENT_TITLE;
+    eventTitleInput.value = t('defaultEventTitle');
     localStorage.removeItem(LOCAL_STORAGE_KEY);
     populateEditor();
     drawPie();
@@ -889,6 +1023,9 @@ function attachListeners() {
 }
 
 async function initializeApp() {
+  const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  currentLanguage = I18N[storedLanguage] ? storedLanguage : 'en';
+
   const loadedFromEvent = await loadFromEventId();
   const loadedFromLegacy = loadedFromEvent ? false : loadFromLegacyShareLink();
 
@@ -896,7 +1033,7 @@ async function initializeApp() {
     loadFromLocalStorage();
   }
 
-  if (!eventTitleInput.value || eventTitleInput.value === DEFAULT_EVENT_TITLE) {
+  if (!eventTitleInput.value || isDefaultTitle(eventTitleInput.value)) {
     const titleFromUrl = getTitleFromUrlParam();
     if (titleFromUrl) {
       eventTitleInput.value = titleFromUrl;
@@ -904,9 +1041,8 @@ async function initializeApp() {
   }
 
   normalizeState();
-  populateEditor();
+  applyTranslations();
   attachListeners();
-  drawPie();
 }
 
 if (document.readyState === 'loading') {

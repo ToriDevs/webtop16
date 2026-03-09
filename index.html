@@ -20,29 +20,34 @@
     </div>
     <div class="container">
         <header class="page-header">
-            <p class="eyebrow">Tournament Visualizer</p>
-            <h1>Generador de Participación</h1>
-            <p class="subtitle">Crea, personaliza y comparte distribuciones de decks con un look más limpio y listo para publicar.</p>
+            <div class="lang-switch" role="group" aria-label="Language switcher">
+                <button id="lang-es" class="lang-btn is-active" type="button" title="Espanol" aria-label="Espanol">ES</button>
+                <button id="lang-en" class="lang-btn" type="button" title="English" aria-label="English">EN</button>
+                <button id="lang-fr" class="lang-btn" type="button" title="Francais" aria-label="Francais">FR</button>
+            </div>
+            <p class="eyebrow" data-i18n="eyebrow">Tournament Visualizer</p>
+            <h1 data-i18n="title">Participation Generator</h1>
+            <p class="subtitle" data-i18n="subtitle">Create, customize and share deck distribution visuals with a clean look ready to publish.</p>
         </header>
 
         <div class="main-content">
-            <input type="text" id="event-title" class="event-title" placeholder="Nombre del evento" value="Nombre del evento">
-            <svg id="pie-svg" width="700" height="700" aria-label="Grafico de distribucion"></svg>
+            <input type="text" id="event-title" class="event-title" placeholder="Event name" value="Event name">
+            <svg id="pie-svg" width="700" height="700" aria-label="Distribution chart"></svg>
         </div>
 
         <div class="actions">
-            <button id="edit-btn" class="action-btn action-primary">Editar</button>
-            <button id="download-btn" class="action-btn">Descargar</button>
-            <button id="share-btn" class="action-btn">Compartir</button>
+            <button id="edit-btn" class="action-btn action-primary" data-i18n="edit">Edit</button>
+            <button id="download-btn" class="action-btn" data-i18n="download">Download</button>
+            <button id="share-btn" class="action-btn" data-i18n="share">Share</button>
         </div>
 
         <div id="editor-overlay" class="editor-overlay hidden"></div>
 
         <div id="editor-panel" class="editor-panel hidden">
             <div class="editor-header">
-                <h2>Editar Datos</h2>
-                <button id="add-btn" class="add-btn" title="Agregar nuevo item">+</button>
-                <button id="reset-btn" class="reset-btn" title="Resetear todo">Reset</button>
+                <h2 data-i18n="editData">Edit Data</h2>
+                <button id="add-btn" class="add-btn" title="Add item">+</button>
+                <button id="reset-btn" class="reset-btn" title="Reset everything" data-i18n="reset">Reset</button>
                 <button id="close-btn" class="close-btn">✕</button>
             </div>
 
