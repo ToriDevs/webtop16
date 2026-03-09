@@ -33,12 +33,19 @@ const categories = {
   Draven: 'https://tcgplayer-cdn.tcgplayer.com/product/663442_in_1000x1000.jpg',
   Irelia: 'https://tcgplayer-cdn.tcgplayer.com/product/663441_in_1000x1000.jpg',
   Ezreal: 'https://tcgplayer-cdn.tcgplayer.com/product/664927_in_1000x1000.jpg',
-  Viktor: 'https://cardbot.com.au/cdn/shop/files/653063_400w_2271a16f-2327-4211-a650-e97adcef0cee.jpg?v=1762749158',
+  Viktor: 'https://tcgplayer-cdn.tcgplayer.com/product/653063_in_1000x1000.jpg',
   Lucian: 'https://riftdecks.com/img/cards/riftbound/SFD/sfd-183-221_full.png',
-  "Kai'sa": 'https://static.dotgg.gg/riftbound/cards/OGN-247.webp',
+  "Kai'sa": 'https://tcgplayer-cdn.tcgplayer.com/product/653045_in_1000x1000.jpg',
   Sivir: 'https://tcgplayer-cdn.tcgplayer.com/product/663438_in_1000x1000.jpg',
   "Rek'sai": 'https://tcgplayer-cdn.tcgplayer.com/product/664922_in_1000x1000.jpg',
-  'Miss Fortune': 'https://cdn.piltoverarchive.com/cards/OGN-267.webp',
+  'Miss Fortune': 'https://tcgplayer-cdn.tcgplayer.com/product/653065_in_1000x1000.jpg',
+  Ornn: 'https://tcgplayer-cdn.tcgplayer.com/product/664924_in_1000x1000.jpg',
+  Annie: 'https://tcgplayer-cdn.tcgplayer.com/product/653152_in_1000x1000.jpg',
+  Lux: 'https://tcgplayer-cdn.tcgplayer.com/product/653156_in_1000x1000.jpg',
+  Yi: 'https://tcgplayer-cdn.tcgplayer.com/product/653154_in_1000x1000.jpg',
+  Fiora: 'https://tcgplayer-cdn.tcgplayer.com/product/664928_in_1000x1000.jpg',
+  Azir: 'https://tcgplayer-cdn.tcgplayer.com/product/663440_in_1000x1000.jpg',
+  Jax: 'https://tcgplayer-cdn.tcgplayer.com/product/664925_in_1000x1000.jpg',
   Personalizado: ''
 };
 
