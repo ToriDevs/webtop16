@@ -10,9 +10,10 @@ const editorOverlay = document.getElementById('editor-overlay');
 const dataList = document.getElementById('data-list');
 const eventTitleInput = document.getElementById('event-title');
 
-const centerX = 350;
-const centerY = 350;
-const radius = 280;
+const CHART_SIZE = 700;
+const centerX = CHART_SIZE / 2;
+const centerY = CHART_SIZE / 2;
+const radius = CHART_SIZE / 2 - 40;
 const LOCAL_STORAGE_KEY = 'tournament_data';
 const SHARED_EVENT_PREFIX = 'shared_event_';
 const DEFAULT_EVENT_TITLE = 'Nombre del evento';
@@ -90,6 +91,8 @@ function normalizeState() {
 }
 
 function drawPie() {
+  svg.setAttribute('viewBox', `0 0 ${CHART_SIZE} ${CHART_SIZE}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svg.innerHTML = '';
   normalizeState();
 
