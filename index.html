@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top 8</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Generador de distribución de decks</h1>
+        
+        <div class="main-content">
+            <input type="text" id="event-title" class="event-title" placeholder="Nombre del Evento" value="Top 8">
+            <svg id="pie-svg" width="700" height="700"></svg>
+        </div>
+
+        <button id="edit-btn" class="edit-btn">⚙️ Editar</button>
+        <button id="download-btn" class="download-btn">⬇️ Descargar</button>
+        <button id="share-btn" class="share-btn">🔗 Compartir</button>
+
+        <div id="editor-overlay" class="editor-overlay hidden"></div>
+
+        <div id="editor-panel" class="editor-panel hidden">
+            <div class="editor-header">
+                <h2>Editar Datos</h2>
+                <button id="add-btn" class="add-btn" title="Agregar nuevo item">+</button>
+                <button id="close-btn" class="close-btn">✕</button>
+            </div>
+            
+            <ul id="data-list" class="editor-list"></ul>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
