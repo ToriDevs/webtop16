@@ -15,6 +15,7 @@ const centerY = 350;
 const radius = 280;
 const LOCAL_STORAGE_KEY = 'tournament_data';
 const SHARED_EVENT_PREFIX = 'shared_event_';
+const DEFAULT_EVENT_TITLE = 'Nombre del evento';
 
 const SUPABASE_URL = 'https://ddsjuhygkfamlsqnkafr.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_fQG7Ih4_TyJQnSGws1x7lw_FNMyl_Hg';
@@ -124,6 +125,12 @@ function drawPie() {
     pattern.setAttribute('x', offsets[index].x);
     pattern.setAttribute('y', offsets[index].y);
 
+    const fallbackRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    fallbackRect.setAttribute('width', '700');
+    fallbackRect.setAttribute('height', '700');
+    fallbackRect.setAttribute('fill', item.color);
+    pattern.appendChild(fallbackRect);
+
     const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
     if (item.image) {
       image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', item.image);
@@ -138,7 +145,7 @@ function drawPie() {
 
     const slice = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     slice.setAttribute('d', pathData);
-    slice.setAttribute('fill', item.image ? `url(#${patternId})` : item.color);
+    slice.setAttribute('fill', `url(#${patternId})`);
     slice.setAttribute('stroke', '#111822');
     slice.setAttribute('stroke-width', '2');
     slice.setAttribute('class', 'pie-slice');
@@ -196,12 +203,17 @@ function drawPie() {
 
 function buildEventPayload() {
   return {
-    title: eventTitleInput.value || 'Nombre del evento',
+    title: getCurrentEventTitle(),
     data,
     offsets,
     version: 2,
     createdAt: new Date().toISOString()
   };
+}
+
+function getCurrentEventTitle() {
+  const value = eventTitleInput.value ? eventTitleInput.value.trim() : '';
+  return value || DEFAULT_EVENT_TITLE;
 }
 
 function saveToLocalStorage() {
@@ -310,7 +322,7 @@ async function imageToBase64(url) {
 }
 
 async function renderChartCanvas() {
-  const eventTitle = eventTitleInput.value || 'Top 16';
+  const eventTitle = getCurrentEventTitle();
   const svgElement = svg.cloneNode(true);
   const base64Images = await Promise.all(data.map((item) => imageToBase64(item.image)));
 
@@ -377,7 +389,7 @@ async function renderChartCanvas() {
 }
 
 async function downloadChart() {
-  const eventTitle = eventTitleInput.value || 'Top 16';
+  const eventTitle = getCurrentEventTitle();
 
   try {
     const canvas = await renderChartCanvas();
@@ -861,7 +873,7 @@ function attachListeners() {
 
     data = JSON.parse(JSON.stringify(INITIAL_DATA));
     offsets = Array.from({ length: data.length }, () => ({ x: 0, y: 0 }));
-    eventTitleInput.value = 'Nombre del evento';
+    eventTitleInput.value = DEFAULT_EVENT_TITLE;
     localStorage.removeItem(LOCAL_STORAGE_KEY);
     populateEditor();
     drawPie();
@@ -878,7 +890,7 @@ async function initializeApp() {
     loadFromLocalStorage();
   }
 
-  if (!eventTitleInput.value || eventTitleInput.value === 'Nombre del evento') {
+  if (!eventTitleInput.value || eventTitleInput.value === DEFAULT_EVENT_TITLE) {
     const titleFromUrl = getTitleFromUrlParam();
     if (titleFromUrl) {
       eventTitleInput.value = titleFromUrl;
