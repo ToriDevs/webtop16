@@ -387,6 +387,31 @@ function randomShareId() {
   return `evt_${Date.now().toString(36)}_${token}`;
 }
 
+function createEventSlug(title) {
+  const raw = (title || 'evento').toString().trim().toLowerCase();
+  return raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64) || 'evento';
+}
+
+function getTitleFromUrlParam() {
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get('nombre');
+  if (!slug) {
+    return '';
+  }
+
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+    .trim();
+}
+
 async function saveEventToSupabase(eventPayload) {
   if (!supabaseClient) {
     return null;
@@ -434,7 +459,8 @@ function generateLegacyShareLink() {
   const payload = buildEventPayload();
   const encoded = btoa(JSON.stringify(payload));
   const baseUrl = `${window.location.origin}${window.location.pathname}`;
-  return `${baseUrl}?shared=${encodeURIComponent(encoded)}`;
+  const slug = createEventSlug(payload.title);
+  return `${baseUrl}?shared=${encodeURIComponent(encoded)}&nombre=${encodeURIComponent(slug)}`;
 }
 
 function loadFromLegacyShareLink() {
@@ -458,13 +484,14 @@ function loadFromLegacyShareLink() {
 async function shareEvent() {
   const payload = buildEventPayload();
   const baseUrl = `${window.location.origin}${window.location.pathname}`;
+  const slug = createEventSlug(payload.title);
 
   let shareUrl = generateLegacyShareLink();
   let usedSupabase = false;
 
   const supabaseEventId = await saveEventToSupabase(payload);
   if (supabaseEventId) {
-    shareUrl = `${baseUrl}?event=${encodeURIComponent(supabaseEventId)}`;
+    shareUrl = `${baseUrl}?event=${encodeURIComponent(supabaseEventId)}&nombre=${encodeURIComponent(slug)}`;
     usedSupabase = true;
   }
 
@@ -633,6 +660,13 @@ async function initializeApp() {
 
   if (!loadedFromSupabase && !loadedFromLegacy) {
     loadFromLocalStorage();
+  }
+
+  if (!eventTitleInput.value || eventTitleInput.value === 'Nombre del evento') {
+    const titleFromUrl = getTitleFromUrlParam();
+    if (titleFromUrl) {
+      eventTitleInput.value = titleFromUrl;
+    }
   }
 
   normalizeState();

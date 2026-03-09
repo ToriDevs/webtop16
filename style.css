@@ -52,14 +52,41 @@ body {
   position: fixed;
   right: 18px;
   bottom: 12px;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.92);
   font-family: 'Space Grotesk', sans-serif;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  font-size: clamp(11px, 1.8vw, 14px);
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
   pointer-events: none;
   z-index: 1;
+  text-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+.watermark-brand {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-size: clamp(24px, 4vw, 38px);
+  line-height: 1;
+}
+
+.watermark-tag {
+  font-size: clamp(12px, 1.8vw, 16px);
+  color: rgba(255, 255, 255, 0.85);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.flag-galicia {
+  width: 20px;
+  height: 14px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  background:
+    linear-gradient(136deg, transparent 34%, #4a86ff 34%, #4a86ff 48%, transparent 48%),
+    #ffffff;
 }
 
 .page-header {
@@ -339,7 +366,21 @@ h1 {
   .watermark {
     right: 12px;
     bottom: 10px;
-    color: rgba(255, 255, 255, 0.3);
+    gap: 8px;
+  }
+
+  .watermark-brand {
+    font-size: clamp(18px, 7vw, 28px);
+  }
+
+  .watermark-tag {
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .flag-galicia {
+    width: 16px;
+    height: 11px;
   }
 
   .actions {
